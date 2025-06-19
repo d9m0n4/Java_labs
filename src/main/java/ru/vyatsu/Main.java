@@ -115,6 +115,65 @@ public class Main {
         }
     }
 
+    public void listAllPrices() throws SQLException {
+        String sql = "SELECT * FROM part_price";
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            System.out.println("Все цены деталей:");
+            while (rs.next()) {
+                System.out.printf("ID: %d | Supplier ID: %d | Part ID: %d | Price: %.2f | Start Date: %s\n",
+                        rs.getInt("id"), rs.getInt("supplier_id"), rs.getInt("part_id"),
+                        rs.getDouble("price"), rs.getDate("start_date"));
+            }
+        }
+    }
+
+    public void listPricesGreaterThan(double threshold) throws SQLException {
+        String sql = "SELECT * FROM part_price WHERE price > ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setDouble(1, threshold);
+            ResultSet rs = stmt.executeQuery();
+            System.out.println("Цены выше " + threshold + ":");
+            while (rs.next()) {
+                System.out.printf("Part ID: %d | Supplier ID: %d | Price: %.2f\n",
+                        rs.getInt("part_id"), rs.getInt("supplier_id"), rs.getDouble("price"));
+            }
+        }
+    }
+
+    public void listPricesInRange(double min, double max) throws SQLException {
+        String sql = "SELECT * FROM part_price WHERE price BETWEEN ? AND ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setDouble(1, min);
+            stmt.setDouble(2, max);
+            ResultSet rs = stmt.executeQuery();
+            System.out.println("Цены от " + min + " до " + max + ":");
+            while (rs.next()) {
+                System.out.printf("Part ID: %d | Supplier ID: %d | Price: %.2f\n",
+                        rs.getInt("part_id"), rs.getInt("supplier_id"), rs.getDouble("price"));
+            }
+        }
+    }
+
+    public void deletePricesLowerThan(double threshold) throws SQLException {
+        String sql = "DELETE FROM part_price WHERE price < ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setDouble(1, threshold);
+            int deleted = stmt.executeUpdate();
+            System.out.println("Удалено записей: " + deleted);
+        }
+    }
+
+    public void increaseAllPricesByPercent(double percent) throws SQLException {
+        String sql = "UPDATE part_price SET price = price * (1 + ? / 100.0)";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setDouble(1, percent);
+            int updated = stmt.executeUpdate();
+            System.out.println("Обновлено записей: " + updated);
+        }
+    }
+
+
     public void close() throws SQLException {
         if (conn != null) conn.close();
     }
@@ -130,6 +189,11 @@ public class Main {
                 System.out.println("3 - Добавить цену детали у поставщика");
                 System.out.println("4 - Зарегистрировать покупку");
                 System.out.println("5 - Показать список покупок");
+                System.out.println("6 - Показать все цены");
+                System.out.println("7 - Показать цены выше заданного значения");
+                System.out.println("8 - Показать цены в диапазоне");
+                System.out.println("9 - Удалить цены ниже заданной");
+                System.out.println("10 - Увеличить все цены на 5%");
                 System.out.println("0 - Выход");
                 System.out.print("Введите номер действия: ");
 
@@ -187,6 +251,25 @@ public class Main {
                             app.addPurchase(sid, pid, purchaseDate, qty);
                         }
                         case 5 -> app.listPurchases();
+                        case 6 -> app.listAllPrices();
+                        case 7 -> {
+                            System.out.print("Введите минимальную цену: ");
+                            double minPrice = Double.parseDouble(scanner.nextLine());
+                            app.listPricesGreaterThan(minPrice);
+                        }
+                        case 8 -> {
+                            System.out.print("Минимальная цена: ");
+                            double min = Double.parseDouble(scanner.nextLine());
+                            System.out.print("Максимальная цена: ");
+                            double max = Double.parseDouble(scanner.nextLine());
+                            app.listPricesInRange(min, max);
+                        }
+                        case 9 -> {
+                            System.out.print("Удалить все цены ниже: ");
+                            double threshold = Double.parseDouble(scanner.nextLine());
+                            app.deletePricesLowerThan(threshold);
+                        }
+                        case 10 -> app.increaseAllPricesByPercent(5);
                         default -> System.out.println("Неверный выбор. Попробуйте снова.");
                     }
                 } catch (SQLException e) {
