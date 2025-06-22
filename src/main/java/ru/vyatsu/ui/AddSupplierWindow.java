@@ -1,45 +1,55 @@
 package ru.vyatsu.ui;
 
-import ru.vyatsu.DBConnection;
+import javafx.geometry.Insets;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.layout.GridPane;
+import javafx.stage.Stage;
+import ru.vyatsu.db.DBConnection;
 
-import javax.swing.*;
-import java.awt.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
-public class AddSupplierWindow extends JFrame {
+public class AddSupplierWindow {
+
+    private final Stage stage;
 
     public AddSupplierWindow() {
-        setTitle("Добавить поставщика");
-        setSize(400, 250);
-        setLocationRelativeTo(null);
-        setLayout(new GridLayout(5, 2, 10, 10));
+        stage = new Stage();
+        stage.setTitle("Добавить поставщика");
 
-        JLabel nameLabel = new JLabel("Имя:");
-        JTextField nameField = new JTextField();
+        GridPane grid = new GridPane();
+        grid.setPadding(new Insets(15));
+        grid.setVgap(10);
+        grid.setHgap(10);
 
-        JLabel addressLabel = new JLabel("Адрес:");
-        JTextField addressField = new JTextField();
+        Label nameLabel = new Label("Имя:");
+        TextField nameField = new TextField();
 
-        JLabel phoneLabel = new JLabel("Телефон:");
-        JTextField phoneField = new JTextField();
+        Label addressLabel = new Label("Адрес:");
+        TextField addressField = new TextField();
 
-        JButton addButton = new JButton("Добавить");
+        Label phoneLabel = new Label("Телефон:");
+        TextField phoneField = new TextField();
 
-        add(nameLabel); add(nameField);
-        add(addressLabel); add(addressField);
-        add(phoneLabel); add(phoneField);
-        add(new JLabel());
-        add(addButton);
+        Button addButton = new Button("Добавить");
 
-        addButton.addActionListener(e -> {
+        grid.add(nameLabel, 0, 0);
+        grid.add(nameField, 1, 0);
+        grid.add(addressLabel, 0, 1);
+        grid.add(addressField, 1, 1);
+        grid.add(phoneLabel, 0, 2);
+        grid.add(phoneField, 1, 2);
+        grid.add(addButton, 1, 3);
+
+        addButton.setOnAction(e -> {
             String name = nameField.getText().trim();
             String address = addressField.getText().trim();
             String phone = phoneField.getText().trim();
 
             if (name.isEmpty() || address.isEmpty() || phone.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Пожалуйста, заполните все поля", "Ошибка", JOptionPane.ERROR_MESSAGE);
+                showAlert(Alert.AlertType.ERROR, "Ошибка", "Пожалуйста, заполните все поля");
                 return;
             }
 
@@ -50,14 +60,28 @@ public class AddSupplierWindow extends JFrame {
                     stmt.setString(2, address);
                     stmt.setString(3, phone);
                     stmt.executeUpdate();
-                    JOptionPane.showMessageDialog(this, "Поставщик добавлен!");
-                    dispose();
+                    showAlert(Alert.AlertType.INFORMATION, "Успех", "Поставщик добавлен!");
+                    stage.close();
                 }
             } catch (SQLException ex) {
-                JOptionPane.showMessageDialog(this, "Ошибка при добавлении поставщика: " + ex.getMessage(), "Ошибка", JOptionPane.ERROR_MESSAGE);
+                showAlert(Alert.AlertType.ERROR, "Ошибка при добавлении", ex.getMessage());
             }
         });
 
-        setVisible(true);
+        Scene scene = new Scene(grid, 400, 250);
+        stage.setScene(scene);
+        stage.show();
+    }
+
+    public Stage getStage() {
+        return stage;
+    }
+
+    private void showAlert(Alert.AlertType type, String title, String message) {
+        Alert alert = new Alert(type);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 }
