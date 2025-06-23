@@ -18,6 +18,12 @@ public class AddPurchaseWindow {
     private final Map<String, Integer> partMap = new LinkedHashMap<>();
     private final Stage stage;
 
+    private ComboBox<String> supplierCombo;
+    private ComboBox<String> partCombo;
+    private TextField dateField;
+    private TextField quantityField;
+    private TextField priceField;
+
     public AddPurchaseWindow() {
         this.stage = new Stage();
         stage.setTitle("Добавить покупку");
@@ -27,11 +33,13 @@ public class AddPurchaseWindow {
         grid.setVgap(10);
         grid.setHgap(10);
 
-        ComboBox<String> supplierCombo = new ComboBox<>();
-        ComboBox<String> partCombo = new ComboBox<>();
-        TextField dateField = new TextField(LocalDate.now().toString());
-        TextField quantityField = new TextField();
-        TextField priceField = new TextField();
+        supplierCombo = new ComboBox<>();
+        partCombo = new ComboBox<>();
+        dateField = new TextField(LocalDate.now().toString());
+        quantityField = new TextField();
+        priceField = new TextField();
+        priceField.setEditable(false); // Цена подтягивается автоматически, вводить нельзя
+
         Button addButton = new Button("Добавить");
 
         grid.add(new Label("Поставщик:"), 0, 0);
@@ -46,81 +54,148 @@ public class AddPurchaseWindow {
         grid.add(priceField, 1, 4);
         grid.add(addButton, 1, 5);
 
-        loadSuppliers(supplierCombo);
-        loadParts(partCombo);
+        loadSuppliers();
 
-        addButton.setOnAction(e -> {
-            String supplier = supplierCombo.getValue();
-            String part = partCombo.getValue();
-            String date = dateField.getText().trim();
-            String quantityText = quantityField.getText().trim();
-            String priceText = priceField.getText().trim();
-
-            if (supplier == null || part == null || date.isEmpty() || quantityText.isEmpty() || priceText.isEmpty()) {
-                showAlert(Alert.AlertType.ERROR, "Ошибка", "Пожалуйста, заполните все поля");
-                return;
+        // При выборе поставщика загружаем детали для этого поставщика
+        supplierCombo.setOnAction(e -> {
+            String selectedSupplier = supplierCombo.getValue();
+            if (selectedSupplier != null) {
+                int supplierId = supplierMap.get(selectedSupplier);
+                loadPartsForSupplier(supplierId);
             }
+            priceField.clear(); // Очистить цену при смене поставщика
+            partCombo.getSelectionModel().clearSelection();
+        });
 
-            try {
-                int quantity = Integer.parseInt(quantityText);
-                double price = Double.parseDouble(priceText);
-                int supplierId = supplierMap.get(supplier);
-                int partId = partMap.get(part);
-
-                try (Connection conn = DBConnection.getConnection();
-                     PreparedStatement stmt = conn.prepareStatement(
-                             "INSERT INTO purchase(supplier_id, part_id, purchase_date, quantity, price_at_purchase) VALUES (?, ?, ?, ?, ?)")) {
-                    stmt.setInt(1, supplierId);
-                    stmt.setInt(2, partId);
-                    stmt.setDate(3, Date.valueOf(date));
-                    stmt.setInt(4, quantity);
-                    stmt.setDouble(5, price);
-                    stmt.executeUpdate();
-
-                    showAlert(Alert.AlertType.INFORMATION, "Успех", "Покупка добавлена!");
-                    stage.close();
-
-
-                } catch (SQLException ex) {
-                    showAlert(Alert.AlertType.ERROR, "Ошибка при добавлении", ex.getMessage());
-                }
-            } catch (NumberFormatException ex) {
-                showAlert(Alert.AlertType.ERROR, "Ошибка", "Неверный формат количества или цены");
+        // При выборе детали подгружаем цену из part_price
+        partCombo.setOnAction(e -> {
+            String selectedSupplier = supplierCombo.getValue();
+            String selectedPart = partCombo.getValue();
+            if (selectedSupplier != null && selectedPart != null) {
+                int supplierId = supplierMap.get(selectedSupplier);
+                int partId = partMap.get(selectedPart);
+                loadPrice(supplierId, partId);
+            } else {
+                priceField.clear();
             }
         });
 
-        Scene scene = new Scene(grid, 420, 300);
+        addButton.setOnAction(e -> addPurchase());
+
+        Scene scene = new Scene(grid, 450, 320);
         stage.setScene(scene);
         stage.show();
     }
 
-    private void loadSuppliers(ComboBox<String> comboBox) {
+    private void loadSuppliers() {
         try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement("SELECT id, name FROM supplier");
+             PreparedStatement stmt = conn.prepareStatement("SELECT id, name FROM supplier ORDER BY name");
              ResultSet rs = stmt.executeQuery()) {
+
+            supplierMap.clear();
+            supplierCombo.getItems().clear();
+
             while (rs.next()) {
-                String name = rs.getString("name");
                 int id = rs.getInt("id");
+                String name = rs.getString("name");
                 supplierMap.put(name, id);
-                comboBox.getItems().add(name);
+                supplierCombo.getItems().add(name);
             }
+
         } catch (SQLException ex) {
             showAlert(Alert.AlertType.ERROR, "Ошибка загрузки поставщиков", ex.getMessage());
         }
     }
 
-    private void loadParts(ComboBox<String> comboBox) {
+    private void loadPartsForSupplier(int supplierId) {
+        String sql = """
+            SELECT DISTINCT pa.id, pa.name
+            FROM part pa
+            JOIN part_price pp ON pa.id = pp.part_id
+            WHERE pp.supplier_id = ?
+            ORDER BY pa.name
+        """;
+
         try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement("SELECT id, name FROM part");
-             ResultSet rs = stmt.executeQuery()) {
-            while (rs.next()) {
-                String name = rs.getString("name");
-                int id = rs.getInt("id");
-                partMap.put(name, id);
-                comboBox.getItems().add(name);
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, supplierId);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                partMap.clear();
+                partCombo.getItems().clear();
+
+                while (rs.next()) {
+                    int id = rs.getInt("id");
+                    String name = rs.getString("name");
+                    partMap.put(name, id);
+                    partCombo.getItems().add(name);
+                }
             }
+
         } catch (SQLException ex) {
             showAlert(Alert.AlertType.ERROR, "Ошибка загрузки деталей", ex.getMessage());
+        }
+    }
+
+    private void loadPrice(int supplierId, int partId) {
+        String sql = "SELECT price FROM part_price WHERE supplier_id = ? AND part_id = ? ORDER BY start_date DESC LIMIT 1";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, supplierId);
+            stmt.setInt(2, partId);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    double price = rs.getDouble("price");
+                    priceField.setText(String.valueOf(price));
+                } else {
+                    priceField.clear();
+                    showAlert(Alert.AlertType.WARNING, "Внимание", "Цена для выбранной детали не найдена.");
+                }
+            }
+
+        } catch (SQLException ex) {
+            showAlert(Alert.AlertType.ERROR, "Ошибка загрузки цены", ex.getMessage());
+        }
+    }
+
+    private void addPurchase() {
+        String supplier = supplierCombo.getValue();
+        String part = partCombo.getValue();
+        String date = dateField.getText().trim();
+        String quantityText = quantityField.getText().trim();
+        String priceText = priceField.getText().trim();
+
+        if (supplier == null || part == null || date.isEmpty() || quantityText.isEmpty() || priceText.isEmpty()) {
+            showAlert(Alert.AlertType.ERROR, "Ошибка", "Пожалуйста, заполните все поля");
+            return;
+        }
+
+        try {
+            int quantity = Integer.parseInt(quantityText);
+            double price = Double.parseDouble(priceText);
+            int supplierId = supplierMap.get(supplier);
+            int partId = partMap.get(part);
+
+            try (Connection conn = DBConnection.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(
+                         "INSERT INTO purchase(supplier_id, part_id, purchase_date, quantity, price_at_purchase) VALUES (?, ?, ?, ?, ?)")) {
+                stmt.setInt(1, supplierId);
+                stmt.setInt(2, partId);
+                stmt.setDate(3, Date.valueOf(date));
+                stmt.setInt(4, quantity);
+                stmt.setDouble(5, price);
+                stmt.executeUpdate();
+
+                showAlert(Alert.AlertType.INFORMATION, "Успех", "Покупка добавлена!");
+                stage.close();
+
+            } catch (SQLException ex) {
+                showAlert(Alert.AlertType.ERROR, "Ошибка при добавлении", ex.getMessage());
+            }
+        } catch (NumberFormatException ex) {
+            showAlert(Alert.AlertType.ERROR, "Ошибка", "Неверный формат количества или цены");
         }
     }
 

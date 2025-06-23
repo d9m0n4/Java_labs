@@ -49,7 +49,10 @@ public class AppWindow extends Application {
             w.getStage().setOnHidden(ev -> loadPurchases());
         });
 
-        menu.getItems().addAll(addSupplier, addPart, addPurchase);
+        MenuItem addOrUpdatePrice = new MenuItem("Добавить цену");
+        addOrUpdatePrice.setOnAction(e -> new AddOrUpdatePriceWindow());
+
+        menu.getItems().addAll(addSupplier, addPart, addPurchase, addOrUpdatePrice);
         menuBar.getMenus().add(menu);
         root.setTop(menuBar);
 
