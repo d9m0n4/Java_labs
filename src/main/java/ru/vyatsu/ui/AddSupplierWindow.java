@@ -54,6 +54,15 @@ public class AddSupplierWindow {
             }
 
             try (Connection conn = DBConnection.getConnection()) {
+                String checkSql = "SELECT COUNT(*) FROM supplier WHERE name = ?";
+                try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+                    checkStmt.setString(1, name);
+                    var rs = checkStmt.executeQuery();
+                    if (rs.next() && rs.getInt(1) > 0) {
+                        showAlert(Alert.AlertType.WARNING, "Дубликат", "Поставщик с таким именем уже существует");
+                        return;
+                    }
+                }
                 String sql = "INSERT INTO supplier(name, address, phone) VALUES (?, ?, ?)";
                 try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                     stmt.setString(1, name);
