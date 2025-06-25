@@ -1,11 +1,12 @@
 package ru.vyatsu;
 
 import org.flywaydb.core.Flyway;
+import ru.vyatsu.db.DBConfig;
 
 public class MigrationRunner {
     public static void main(String[] args) {
         Flyway flyway = Flyway.configure()
-                .dataSource("jdbc:postgresql://localhost:5432/autoparts_db", "postgres", "root")
+                .dataSource(DBConfig.URL, DBConfig.USER ,DBConfig.PASSWORD)
                 .locations("classpath:db/migration")
                 .load();
         flyway.migrate();

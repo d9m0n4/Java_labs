@@ -1,5 +1,6 @@
 package ru.vyatsu;
 
+import ru.vyatsu.db.Database;
 import ru.vyatsu.service.PartPriceService;
 
 import java.sql.*;
