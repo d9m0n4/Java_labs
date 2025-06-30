@@ -30,4 +30,7 @@ public class Purchase {
 
     public String getSupplierName() { return supplierName.get(); }
     public String getPartName() { return partName.get(); }
+
+    public int getQuantity() { return quantity.get(); }
+    public double getPriceAtPurchase() { return priceAtPurchase.get(); }
 }

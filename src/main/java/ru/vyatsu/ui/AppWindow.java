@@ -110,8 +110,12 @@ public class AppWindow extends Application {
         TableColumn<Purchase, Number> qtyCol = new TableColumn<>("Количество");
         qtyCol.setCellValueFactory(data -> data.getValue().quantityProperty());
 
-        TableColumn<Purchase, Number> priceCol = new TableColumn<>("Цена");
-        priceCol.setCellValueFactory(data -> data.getValue().priceAtPurchaseProperty());
+        TableColumn<Purchase, Number> priceCol = new TableColumn<>("Стоимость");
+        priceCol.setCellValueFactory(data -> {
+            Purchase p = data.getValue();
+            double total = p.getQuantity() * p.getPriceAtPurchase();
+            return new ReadOnlyDoubleWrapper(total);
+        });
 
         table.getColumns().addAll(idCol, supplierCol, partCol, dateCol, qtyCol, priceCol);
     }
