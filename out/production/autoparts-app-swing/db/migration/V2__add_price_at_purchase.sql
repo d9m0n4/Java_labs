@@ -1,0 +1,1 @@
+ALTER TABLE purchase ADD COLUMN price_at_purchase NUMERIC(12,2) NOT NULL DEFAULT 0;
