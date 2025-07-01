@@ -1,68 +1,74 @@
 package ru.vyatsu.ui;
 
-import ru.vyatsu.DBConnection;
+import javafx.geometry.Insets;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
+import javafx.stage.Stage;
+import ru.vyatsu.db.DBConnection;
 
-import javax.swing.*;
-import java.awt.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
-public class AddPartWindow extends JFrame {
+public class AddPartWindow {
 
     public AddPartWindow() {
-        setTitle("Добавить деталь");
-        setSize(400, 250);
-        setLocationRelativeTo(null);
+        Stage stage = new Stage();
+        stage.setTitle("Добавить деталь");
 
-        setLayout(new GridLayout(5, 2, 10, 10));
+        GridPane grid = new GridPane();
+        grid.setPadding(new Insets(15));
+        grid.setVgap(10);
+        grid.setHgap(10);
 
-        JPanel mainpanel = new JPanel(new GridLayout(5, 2, 10, 10));
+        Label nameLabel = new Label("Название детали:");
+        TextField nameField = new TextField();
 
-        JLabel nameLabel = new JLabel("Название детали:");
-        JTextField nameField = new JTextField();
+        Label articleLabel = new Label("Артикул:");
+        TextField articleField = new TextField();
 
-        JLabel articleLabel = new JLabel("Артикул:");
-        JTextField articleField = new JTextField();
+        Button addButton = new Button("Добавить");
 
-        JButton addButton = new JButton("Добавить");
+        grid.add(nameLabel, 0, 0);
+        grid.add(nameField, 1, 0);
+        grid.add(articleLabel, 0, 1);
+        grid.add(articleField, 1, 1);
+        grid.add(addButton, 1, 2);
 
-        mainpanel.add(nameLabel);
-        mainpanel.add(nameField);
-        mainpanel.add(articleLabel);
-        mainpanel.add(articleField);
-        mainpanel.add(new JLabel());
-        mainpanel.add(addButton);
-
-        JPanel paddingPanel = new JPanel(new BorderLayout());
-        paddingPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
-        paddingPanel.add(mainpanel, BorderLayout.CENTER);
-
-        setContentPane(paddingPanel);
-
-        addButton.addActionListener(e -> {
+        addButton.setOnAction(e -> {
             String name = nameField.getText().trim();
-            String articleNumber = articleField.getText().trim();
+            String article = articleField.getText().trim();
 
-            if (name.isEmpty() || articleNumber.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Пожалуйста, заполните все поля", "Ошибка", JOptionPane.ERROR_MESSAGE);
+            if (name.isEmpty() || article.isEmpty()) {
+                showAlert(Alert.AlertType.ERROR, "Ошибка", "Пожалуйста, заполните все поля");
                 return;
             }
 
             try (Connection conn = DBConnection.getConnection()) {
                 String sql = "INSERT INTO part(article_number, name) VALUES (?, ?)";
                 try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    stmt.setString(1, articleNumber);
+                    stmt.setString(1, article);
                     stmt.setString(2, name);
                     stmt.executeUpdate();
-                    JOptionPane.showMessageDialog(this, "Деталь добавлена!");
-                    dispose();
+                    showAlert(Alert.AlertType.INFORMATION, "Успех", "Деталь добавлена!");
+                    stage.close();
                 }
             } catch (SQLException ex) {
-                JOptionPane.showMessageDialog(this, "Ошибка при добавлении детали: " + ex.getMessage(), "Ошибка", JOptionPane.ERROR_MESSAGE);
+                showAlert(Alert.AlertType.ERROR, "Ошибка при добавлении", ex.getMessage());
             }
         });
 
-        setVisible(true);
+        Scene scene = new Scene(grid, 400, 200);
+        stage.setScene(scene);
+        stage.show();
+    }
+
+    private void showAlert(Alert.AlertType type, String title, String message) {
+        Alert alert = new Alert(type);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 }

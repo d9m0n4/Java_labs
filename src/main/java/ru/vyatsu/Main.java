@@ -1,7 +1,9 @@
 package ru.vyatsu;
 
+import ru.vyatsu.ui.AppWindow;
+
 public class Main {
     public static void main(String[] args) {
-        javax.swing.SwingUtilities.invokeLater(AppWindow::new);
+        AppWindow.launch(AppWindow.class);
     }
 }
