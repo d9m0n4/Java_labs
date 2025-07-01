@@ -108,7 +108,6 @@ public class AddOrUpdatePriceWindow {
         }
     }
 
-
     private void savePrice() {
         String supplier = supplierCombo.getValue();
         String part = partCombo.getValue();
